@@ -1,0 +1,22 @@
+# floder
+# ===================
+# python env
+/Scripts
+/Lib
+/Include
+/share
+
+# LLM
+*.gguf
+# ===================
+
+# files
+# ===================
+# python env
+pyvenv.cfg
+# LLM file
+*.gguf
+
+# testing file
+test.*
+# ===================
