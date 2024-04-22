@@ -110,3 +110,8 @@ class SetupMYSQL(object):
         )
 
         self.connection.commit()
+
+class SetupMilvus(object):
+    def __init__(self) -> None:
+        self.HOST = getenv("MILVUS_HOST")
+        self.PORT = getenv("MILVUS_PORT")

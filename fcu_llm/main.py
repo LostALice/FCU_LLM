@@ -3,6 +3,8 @@
 from fastapi import UploadFile, HTTPException
 from fastapi import FastAPI
 
+from utils.error import *
+
 import uuid
 
 app = FastAPI(debug=True)

@@ -2,6 +2,9 @@
 
 from langchain_community.llms import LlamaCpp
 from langchain.prompts import PromptTemplate
+from pymilvus import MilvusClient
+
+from error import *
 
 from setup import SetupMYSQL
 from os import getenv
@@ -32,9 +35,9 @@ class MySQLHandler(object):
 class LLMHandler(object):
     def __init__(self) -> None:
         self.model = LlamaCpp(
-            model_path="./LLM/chinese-alpaca-2-7b-gguf-q4_k-im.gguf",
+            model_path=f"""./model/LLM/{getenv("LLM_MODEL_PATH")}""",
             n_gpu_layers=-1,
-            n_ctx=1024
+            n_ctx=2048
         )
 
         self.prompt_template = (
@@ -57,10 +60,16 @@ class LLMHandler(object):
         }
         return self.chain.invoke(context)
 
+class MilvusHandler(object):
+    def __init__(self) -> None:
+        client = MilvusClient(
+            uri=f"""http://{getenv("MILVUS_HOST")}:{getenv("MILVUS_PORT")}"""
+        )
+
 if __name__ == "__main__":
     from dotenv import load_dotenv
     from pprint import pprint
-    # load_dotenv(".env")
+    load_dotenv("./.env")
 
     llm = LLMHandler()
 
