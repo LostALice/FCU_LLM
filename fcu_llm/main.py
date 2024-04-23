@@ -34,7 +34,7 @@ async def file_upload(pdf_file: UploadFile):
     success = MySQLHandler().uploaded_file(file_uuid=file_uuid, filename=pdf_file.filename)
 
     pdf_contents = pdf_file.file.read()
-    with open("./files/{file_uuid}.pdf", "wb") as f:
+    with open(f"./files/{file_uuid}.pdf", "wb") as f:
         f.write(pdf_contents)
 
     logging.info(f"file uploaded: {success}")
