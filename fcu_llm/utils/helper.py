@@ -1,77 +1,57 @@
 # Code by AkinoAlice@TyrantRey
 
-from langchain_community.llms import LlamaCpp
-from langchain.prompts import PromptTemplate
-from pymilvus import MilvusClient
+from utils.setup import SetupMYSQL, SetupMilvus
+from utils.error import *
 
-from error import *
-
-from setup import SetupMYSQL
 from os import getenv
 
-import mysql.connector as connector
+import logging
 
-class MySQLHandler(object):
+class MySQLHandler(SetupMYSQL):
     def __init__(self) -> None:
-        self.connection = connector.connect(
-            host=getenv("MYSQL_HOST"),
-            user=getenv("MYSQL_USER_NAME"),
-            password=getenv("MYSQL_PASSWORD"),
-            port=getenv("MYSQL_PORT"),
-        )
+        super().__init__()
 
-        try:
-            self.connection.database=getenv("MYSQL_DATABASE")
-        except connector.Error as error:
-            print(error)
-            SetupMYSQL()
-        finally:
-            self.connection.database=getenv("MYSQL_DATABASE")
-            self.cursor = self.connection.cursor(dictionary=True, prepared=True)
+    def uploaded_file(self, file_uuid: str = "", filename: str = "") -> bool:
+        logging.info(filename)
+        self.cursor.execute("""
+            INSERT INTO file (file_id, file_name)
+            VALUES (
+                %s, %s
+            );""", (file_uuid, filename,))
+        self.close_connection()
 
-    def file_upload(self, filename) -> bool:
         return True
 
-class LLMHandler(object):
+    def close_connection(self, commit_sql: bool=True) -> bool:
+        try:
+            if commit_sql:
+                logging.debug(f"committed sql: {self.cursor}")
+                self.connection.commit()
+        except Exception as error:
+            logging.error(error)
+            self.connection.rollback()
+            return False
+        finally:
+            logging.debug("Mysql connection closed")
+            self.connection.close()
+            return True
+
+class MilvusHandler(SetupMilvus):
     def __init__(self) -> None:
-        self.model = LlamaCpp(
-            model_path=f"""./model/LLM/{getenv("LLM_MODEL_PATH")}""",
-            n_gpu_layers=-1,
-            n_ctx=2048
-        )
+        super().__init__()
 
-        self.prompt_template = (
-            "[INST] <<SYS>>\n"
-            "你是一個逢甲大學的學生助理，你只需要回答關於學分，課程，老師等有關資料，不需要回答學分，課程，老師以外的問題。\n"
-            "<</SYS>>\n{question} [/INST]"
-        )
-
-        self.prompt = PromptTemplate(
-            template=self.prompt_template,
-            input_variables=["question"]
-        )
-
-        self.chain = self.prompt | self.model
+class RAGHandler(object):
+    def __init__(self) -> None:
+        ...
 
     def ask_question(self, question: str = "") -> str:
-        context = {
-            "context": "你是一個逢甲大學的學生助理，你只需要回答關於學分，課程，老師等有關資料，不需要回答學分，課程，老師以外的問題。",
-            "question": question
-        }
-        return self.chain.invoke(context)
+        ...
+        return
 
-class MilvusHandler(object):
+class EncoderHandler(object):
     def __init__(self) -> None:
-        client = MilvusClient(
-            uri=f"""http://{getenv("MILVUS_HOST")}:{getenv("MILVUS_PORT")}"""
-        )
+        ...
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
-    from pprint import pprint
     load_dotenv("./.env")
-
-    llm = LLMHandler()
-
-    pprint(llm.ask_question("什麼是學分"))
-
