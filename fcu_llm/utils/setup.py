@@ -9,6 +9,7 @@ from os import getenv, listdir
 import mysql.connector as connector
 import logging
 
+
 class SetupMYSQL(object):
     def __init__(self) -> None:
         self.HOST = getenv("MYSQL_HOST")
@@ -23,13 +24,13 @@ class SetupMYSQL(object):
             port=getenv("MYSQL_PORT"),
         )
         self.cursor = self.connection.cursor(
-                dictionary=True, prepared=True)
+            dictionary=True, prepared=True)
 
         try:
             self.connection.database = getenv("MYSQL_DATABASE")
         except connector.Error as error:
             logging.error(error)
-            logging.debug("Creating database")
+            logging.debug("Creating MYSQL database")
             self.create_database()
         finally:
             self.connection.database = getenv("MYSQL_DATABASE")
@@ -70,7 +71,7 @@ class SetupMYSQL(object):
         self.cursor.execute(
             """
             CREATE TABLE `FCU_LLM`.`role` (
-                `role_id` INT NOT NULL,
+                `role_id` INT NOT NULL AUTO_INCREMENT,
                 `role_name` VARCHAR(45) NOT NULL,
                 PRIMARY KEY (`role_id`)
             );
@@ -93,10 +94,11 @@ class SetupMYSQL(object):
         self.cursor.execute(
             """
             CREATE TABLE `file` (
-                `file_id` varchar(45) NOT NULL,
-                `file_name` varchar(255) NOT NULL,
-                `last_update` timestamp NOT NULL DEFAULT NOW(),
-                `expired` tinyint NOT NULL DEFAULT '1',
+                `file_id` VARCHAR(45) NOT NULL,
+                `file_name` VARCHAR(255) NOT NULL,
+                `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
+                `expired` TINYINT NOT NULL DEFAULT '1',
+                `tags` JSON 
                 PRIMARY KEY (`file_id`)
             )
             """
@@ -116,31 +118,32 @@ class SetupMYSQL(object):
             """
         )
 
-        # TAG table
-        self.cursor.execute(
-            """
-            CREATE TABLE `FCU_LLM`.`tag` (
-                `tag_id` INT NOT NULL,
-                `tag_name` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`tag_id`)
-            );
-            """
-        )
-
         self.connection.commit()
-        logging.debug("Created database")
+        logging.debug("Created MYSQL database")
+
 
 class SetupMilvus(object):
     def __init__(self) -> None:
         self.HOST = getenv("MILVUS_HOST")
         self.PORT = getenv("MILVUS_PORT")
+        self.default_collection_name = getenv("MILVUS_DEFAULT_COLLECTION_NAME")
 
         self.client = MilvusClient(
             uri=f"http://{self.HOST}:{self.PORT}"
         )
 
+        try:
+            self.client.get_load_state(
+                collection_name=self.default_collection_name
+            )
+        except Exception as error:
+            logging.error(error)
+            logging.debug("Creating Milvus database")
+            self.create_collection(collection_name=self.default_collection_name)
+
     def create_collection(
-        self, collection_name: str = "",
+        self,
+        collection_name: str,
         index_type: Literal["FLAT", "IVF_FLAT", "IVF_SQ8", "IVF_PQ", "HNSW",
                             "ANNOY", "RHNSW_FLAT", "RHNSW_PQ", "RHNSW_SQ"] = "IVF_FLAT",
         metric_type: Literal["L2", "IP"] = "L2"
@@ -154,7 +157,9 @@ class SetupMilvus(object):
         schema.add_field(field_name="id", datatype=DataType.VARCHAR,
                          max_length=512, is_primary=True)
         schema.add_field(field_name="source",
-                         datatype=DataType.VARCHAR, max_length=512)
+                         datatype=DataType.VARCHAR, max_length=1024)
+        schema.add_field(field_name="content", datatype=DataType.VARCHAR,
+                         max_length=2048)
         schema.add_field(field_name="vector",
                          datatype=DataType.FLOAT_VECTOR, dim=768)
 
@@ -171,19 +176,20 @@ class SetupMilvus(object):
 
         self.client.create_collection(
             collection_name=collection_name,
-            schema=schema,
+            index_params=index_params,
             metric_type=metric_type,
-            index_params=index_params
+            schema=schema,
         )
 
         collection_status = self.client.get_load_state(
             collection_name=collection_name
         )
+
         logging.debug(f"Creating collection: {collection_name}")
         return collection_status
 
 
-class SetupRAG(object):
-    def __init__(self) -> None:
-        self.LLM_model = getenv("LLM_MODEL_PATH")
-        self.embedded_model = getenv("EMBEDDING_MODEL_PATH")
+# class SetupRAG(object):
+#     def __init__(self) -> None:
+#         self.LLM_model = getenv("LLM_MODEL_PATH")
+#         self.embedded_model = getenv("EMBEDDING_MODEL_PATH")
