@@ -5,12 +5,10 @@ from fastapi import HTTPException
 from fastapi import FastAPI
 
 from utils.helper import (
-    EncoderHandler,
-    MySQLHandler,
+    VectorHandler,
     MilvusHandler,
-    RAGHandler,
+    MySQLHandler,
     TextHandler,
-    VectorHandler
 )
 from utils.error import *
 
@@ -21,6 +19,14 @@ logging.level = logging.DEBUG
 
 app = FastAPI(debug=True)
 
+class UtilsLoader(object):
+    def __init__(self) -> None:
+        self.encoder_client = VectorHandler()
+        self.milvus_client = MilvusHandler()
+        self.mysql_client = MySQLHandler()
+
+
+LOADER = UtilsLoader()
 
 @app.get("/", status_code=200)
 async def test():
@@ -53,16 +59,13 @@ async def file_upload(pdf_file: UploadFile, tags: list[str] = Form()):
     splitted_content = docs_loader.pdf_splitter(f"./files/{file_uuid}.pdf")
 
     # insert to milvus
-    milvus_client = MilvusHandler()
-    mysql_client = MySQLHandler()
-    text2vector = VectorHandler()
-
     # to be
-    # for sentence in splitted_content:
-    #     vector = text2vector.encoder(sentence)
-    #     sentence_id = milvus_client.insert_sentence(
-    #         vector=vector, pdf_file_name=pdf_file.filename, content=sentence)
-    #     mysql_client.insert_file()
+    for sentence in splitted_content:
+        vector = LOADER.encoder_client.encoder(sentence)
+        LOADER.milvus_client.insert_sentence(
+            vector=vector, pdf_file_name=pdf_file.filename, content=sentence)
+
+        LOADER.mysql_client.insert_file()
 
     if success:
         return {

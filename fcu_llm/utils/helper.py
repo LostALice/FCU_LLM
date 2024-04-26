@@ -30,15 +30,14 @@ class MySQLHandler(SetupMYSQL):
         return True
 
     def insert_file(self, file_uuid: str, filename: str, tags: list[str]) -> bool:
-        if tags[0] is None:
-            tags = []
-
         logging.info("insert_file", file_uuid, filename, tags)
         self.cursor.execute("""
             INSERT INTO file (file_id, file_name)
             VALUES (
                 %s, %s
             );""", (file_uuid, filename,))
+
+        self.close_connection()
 
     def close_connection(self, commit_sql: bool = True) -> bool:
         try:

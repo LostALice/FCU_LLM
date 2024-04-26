@@ -4,7 +4,7 @@ from pymilvus import MilvusClient
 from pymilvus import DataType
 
 from typing import Literal, Dict
-from os import getenv, listdir
+from os import getenv
 
 import mysql.connector as connector
 import logging
@@ -71,7 +71,7 @@ class SetupMYSQL(object):
         self.cursor.execute(
             """
             CREATE TABLE `FCU_LLM`.`role` (
-                `role_id` INT NOT NULL AUTO_INCREMENT,
+                `role_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `role_name` VARCHAR(45) NOT NULL,
                 PRIMARY KEY (`role_id`)
             );
@@ -98,8 +98,8 @@ class SetupMYSQL(object):
                 `file_name` VARCHAR(255) NOT NULL,
                 `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
                 `expired` TINYINT NOT NULL DEFAULT '1',
-                `tags` JSON 
-                PRIMARY KEY (`file_id`)
+                `tag` VARCHAR(45) NOT NULL DEFAULT "",
+                PRIMARY KEY (`file_id`, `tags`)
             )
             """
         )
