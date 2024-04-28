@@ -7,6 +7,7 @@ from typing import Literal, Dict
 from os import getenv
 
 import mysql.connector as connector
+from pprint import pformat
 import logging
 
 
@@ -30,9 +31,10 @@ class SetupMYSQL(object):
             self.connection.database = getenv("MYSQL_DATABASE")
         except connector.Error as error:
             logging.error(error)
-            logging.debug("Creating MYSQL database")
+            logging.debug(pformat(f"Creating MYSQL database {self.DATABASE}"))
             self.create_database()
         finally:
+            logging.debug(pformat(f"Using MYSQL database {self.DATABASE}"))
             self.connection.database = getenv("MYSQL_DATABASE")
             self.cursor = self.connection.cursor(
                 dictionary=True, prepared=True)
@@ -98,8 +100,8 @@ class SetupMYSQL(object):
                 `file_name` VARCHAR(255) NOT NULL,
                 `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
                 `expired` TINYINT NOT NULL DEFAULT '1',
-                `tag` VARCHAR(45) NOT NULL DEFAULT "",
-                PRIMARY KEY (`file_id`, `tags`)
+                `tags` JSON NOT NULL DEFAULT (JSON_OBJECT()),
+                PRIMARY KEY (`file_id`)
             )
             """
         )
@@ -110,7 +112,7 @@ class SetupMYSQL(object):
             CREATE TABLE `FCU_LLM`.`qa` (
                 `chat_id` VARCHAR(45) NOT NULL,
                 `content` LONGTEXT NOT NULL,
-                `sent_time` TIMESTAMP NOT NULL,
+                `sent_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `sent_by` VARCHAR(45) NOT NULL,
                 `file_id` VARCHAR(45) NULL DEFAULT NULL,
                 PRIMARY KEY (`chat_id`)
@@ -119,7 +121,7 @@ class SetupMYSQL(object):
         )
 
         self.connection.commit()
-        logging.debug("Created MYSQL database")
+        logging.debug(pformat(f"Created MYSQL database {self.DATABASE}"))
 
 
 class SetupMilvus(object):
@@ -128,18 +130,20 @@ class SetupMilvus(object):
         self.PORT = getenv("MILVUS_PORT")
         self.default_collection_name = getenv("MILVUS_DEFAULT_COLLECTION_NAME")
 
-        self.client = MilvusClient(
+        self.milvus_client = MilvusClient(
             uri=f"http://{self.HOST}:{self.PORT}"
         )
 
-        try:
-            self.client.get_load_state(
-                collection_name=self.default_collection_name
-            )
-        except Exception as error:
-            logging.error(error)
-            logging.debug("Creating Milvus database")
-            self.create_collection(collection_name=self.default_collection_name)
+        loading_status = self.milvus_client.get_load_state(
+            collection_name=self.default_collection_name
+        )
+        logging.debug(pformat(f"""Milvus loading collection `{self.default_collection_name}`: {loading_status["state"]}"""))
+
+        if not loading_status or loading_status["state"] == loading_status["state"].NotExist:
+            logging.error("Milvus collection not loaded")
+            logging.debug(pformat("Creating Milvus database"))
+            self.create_collection(
+                collection_name=self.default_collection_name)
 
     def create_collection(
         self,
@@ -163,7 +167,7 @@ class SetupMilvus(object):
         schema.add_field(field_name="vector",
                          datatype=DataType.FLOAT_VECTOR, dim=768)
 
-        index_params = self.client.prepare_index_params()
+        index_params = self.milvus_client.prepare_index_params()
 
         index_params.add_index(
             field_name="vector",
@@ -174,18 +178,18 @@ class SetupMilvus(object):
             }
         )
 
-        self.client.create_collection(
+        self.milvus_client.create_collection(
             collection_name=collection_name,
             index_params=index_params,
             metric_type=metric_type,
             schema=schema,
         )
 
-        collection_status = self.client.get_load_state(
+        collection_status = self.milvus_client.get_load_state(
             collection_name=collection_name
         )
 
-        logging.debug(f"Creating collection: {collection_name}")
+        logging.debug(pformat(f"Creating collection: {collection_name}"))
         return collection_status
 
 
