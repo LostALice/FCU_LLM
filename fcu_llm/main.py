@@ -113,7 +113,7 @@ async def questioning(chat_id: str, question: str,  user_id: str, collection: st
     # search question
     question_vector = LOADER.encoder_client.encoder(question)
     regulations = LOADER.milvus_client.search_similarity(question_vector, collection_name=collection)
-    answer = LOADER.RAG.answering(regulations=regulations["content"], question=question)
+    answer = LOADER.RAG.response(regulations=regulations["content"], question=question)
 
     # insert into mysql
     # to be

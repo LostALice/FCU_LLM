@@ -1,15 +1,12 @@
 # Code by AkinoAlice@TyrantRey
 
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.schema.runnable import RunnablePassthrough
-from langchain_community.llms import LlamaCpp
-from langchain.prompts import PromptTemplate
 
 from utils.setup import SetupMYSQL, SetupMilvus
 from utils.error import *
 
 from text2vec import SentenceModel
-# from llama_cpp import Llama
+from llama_cpp import Llama
 from pprint import pformat
 from numpy import ndarray
 from typing import Union
@@ -74,7 +71,7 @@ class MilvusHandler(SetupMilvus):
                     collection_name="default",
                     ids=[i["id"] for i in is_duplicates]
                 )
-                logging.debug(pformat(f"Deleted: {info} {is_duplicates}"))
+                logging.debug(pformat(f"Deleted: {info}"))
 
         success = self.milvus_client.insert(
             collection_name=collection,
@@ -116,7 +113,7 @@ class DocsHandler(object):
 
     def pdf_splitter(self, document_path: str) -> list[str]:
         if not document_path.endswith(".pdf"):
-            raise FileFormatError("Supported formats: .pdf")
+            raise FormatError("Supported formats: .pdf")
 
         pdf = PyPDFLoader(document_path)
         all_splits = pdf.load_and_split()
@@ -138,39 +135,60 @@ class VectorHandler(object):
 
 class RAGHandler(object):
     def __init__(self) -> None:
-        self.template = "你是一個逢甲大學的學生助理，你只需要回答關於學分，課程，老師等有關資料，不需要回答學分，課程，老師以外的問題。你現在有以下資料 {context} 根據上文回答問題: {question} 你的回答"
-        self.prompt_template = PromptTemplate.from_template(self.template)
-
-        self.llm_model = f"""./model/{os.getenv("LLM_MODEL")}"""
-        if not os.path.isfile(self.llm_model):
-            logging.error(pformat("FileNotFoundError"))
-            raise FileNotFoundError
-
-        self.llm = LlamaCpp(
+        self.model = Llama(
             model_path=f"""./model/{os.getenv("LLM_MODEL")}""",
+            verbose=False,
             n_gpu_layers=-1,
             n_ctx=0,
-            verbose=True
         )
+
+        self.system_prompt = "你是一個逢甲大學的學生助理，你只需要回答關於學分，課程，老師等有關資料，不需要回答學分，課程，老師以外的問題。你現在有以下資料 {regulations} 根據上文回答問題"
+
         self.converter = opencc.OpenCC("s2tw.json")
 
-    def answering(self, regulations: list, question: str) -> str:
-        rag_chain = (
-            {
-                "context": lambda x: regulations,
-                "question": RunnablePassthrough()
-            }
-            | self.prompt_template
-            | self.llm
-        )
-        logging.info(pformat(rag_chain))
-        llm_response = rag_chain.invoke(question)
+    def response(self, question: str, regulations: list, max_tokens: int = 8192):
+        content = self.system_prompt.format(regulations=" ".join(regulations))
 
-        return self.converter.convert(llm_response)
+        message = [
+            {
+                "role": "system",
+                "content": content,
+            },
+            {
+                "role": "user",
+                "content": question
+            },
+        ]
+
+        output = self.model.create_chat_completion(
+            message,
+            stop=["<|eot_id|>", "<|end_of_text|>"],
+            max_tokens=max_tokens,
+        )["choices"][0]["message"]["content"]
+
+        return self.converter.convert(output)
+
+    # # unused
+    # def chat(self, system: list[dict[str]], user: list[dict[str]], max_tokens: int = 8192):
+    #     if len(system) != len(user):
+    #         raise ChatNotEqualError
+
+    #     message = []
+    #     for answer, question in zip(system, user):
+    #         message.append(answer)
+    #         message.append(question)
+
+    #     output = self.model.create_chat_completion(
+    #         message,
+    #         stop=["<|eot_id|>", "<|end_of_text|>"],
+    #         max_tokens=max_tokens,
+    #     )["choices"][0]["message"]["content"]
+
+    #     return self.converter.convert(output)
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv("./.env")
 
-    VectorHandler().encoder("人工智慧專業技術與應用學士學位學程科目的抵免原則")
+    VectorHandler().encoder("學分的抵免原則")
     MilvusHandler().search_similarity()

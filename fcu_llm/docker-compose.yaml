@@ -5,7 +5,7 @@ services:
     container_name: backend
     environment:
       # Mysql Setup
-      - MYSQL_HOST=localhost
+      - MYSQL_HOST=140.134.197.150
       - MYSQL_PORT=3307
       - MYSQL_USER_NAME=root
       - MYSQL_PASSWORD=Zyon-
@@ -17,11 +17,12 @@ services:
       - MILVUS_DEFAULT_COLLECTION_NAME=default
 
       # LLM Setup
-      # HF: shenzhi-wang/Llama3-8B-Chinese-Chat-GGUF-8bit
-      - LLM_MODEL=Llama3-8B-Chinese-Chat-q8.gguf
+      # HF: Llama3-8B-Chinese-Chat-q8-v2.gguf
+      # HF: chinese-alpaca-2-7b-gguf-q4_k.gguf
+      - LLM_MODEL=Llama3-8B-Chinese-Chat-q8-v2.gguf
       - HF_EMBEDDING_MODEL=shibing624/text2vec-base-chinese
-    volumes:
-      - /path/of/model/:/FCU_LLM/model
+    # volumes:
+    #   - /path/of/model/:/FCU_LLM/model
     ports:
       - 8081:8080
     restart: unless-stopped
