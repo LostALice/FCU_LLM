@@ -14,3 +14,7 @@ class MySQLConnectionError(Exception):
 
 class FileFormatError(Exception):
     pass
+
+
+class FileNotFoundError(Exception):
+    pass

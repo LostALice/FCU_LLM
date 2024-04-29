@@ -1,0 +1,24 @@
+# dev env for debug only
+
+FROM python:3.11
+
+RUN apt-get update && apt-get install -y
+
+RUN wget https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda-repo-debian12-12-4-local_12.4.1-550.54.15-1_amd64.deb
+RUN dpkg -i cuda-repo-debian12-12-4-local_12.4.1-550.54.15-1_amd64.deb
+RUN cp /var/cuda-repo-debian12-12-4-local/cuda-*-keyring.gpg /usr/share/keyrings/
+# RUN add-apt-repository contrib
+RUN apt-get update
+RUN apt-get -y install cuda-toolkit-12-4
+
+RUN CUDACXX=/usr/local/cuda-12/bin/nvcc CMAKE_ARGS="-DLLAMA_CUBLAS=on -DCMAKE_CUDA_ARCHITECTURES=all-major" FORCE_CMAKE=1 pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
+
+RUN mkdir /FCU_LLM
+WORKDIR /FCU_LLM
+ADD . .
+
+RUN pip install -r ./req.txt
+
+RUN mkdir files
+
+ENTRYPOINT ["uvicorn", "--host", "0.0.0.0", "main:app", "--port", "8080", "--reload"]

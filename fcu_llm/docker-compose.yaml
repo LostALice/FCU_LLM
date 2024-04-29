@@ -1,0 +1,46 @@
+version: "3"
+services:
+  backend:
+    image: test:latest
+    container_name: backend
+    environment:
+      # Mysql Setup
+      - MYSQL_HOST=localhost
+      - MYSQL_PORT=3307
+      - MYSQL_USER_NAME=root
+      - MYSQL_PASSWORD=Zyon-
+      - MYSQL_DATABASE=FCU_LLM
+
+      # Milvus Setup
+      - MILVUS_HOST=140.134.197.150
+      - MILVUS_PORT=19530
+      - MILVUS_DEFAULT_COLLECTION_NAME=default
+
+      # LLM Setup
+      # HF: shenzhi-wang/Llama3-8B-Chinese-Chat-GGUF-8bit
+      - LLM_MODEL=Llama3-8B-Chinese-Chat-q8.gguf
+      - HF_EMBEDDING_MODEL=shibing624/text2vec-base-chinese
+    volumes:
+      - /path/of/model/:/FCU_LLM/model
+    ports:
+      - 8081:8080
+    restart: unless-stopped
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      mysql:
+        condition: service_started
+  mysql:
+    image: mysql:latest
+    container_name: mysql-test
+    environment:
+      MYSQL_ROOT_PASSWORD: Zyon-
+    restart: unless-stopped
+    ports:
+     - 3307:3306

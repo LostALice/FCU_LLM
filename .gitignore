@@ -4,6 +4,7 @@
 /Lib
 /Include
 /share
+/Library
 .vscode/
 
 # LLM

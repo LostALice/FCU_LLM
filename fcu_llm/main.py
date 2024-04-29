@@ -63,7 +63,7 @@ async def login():
 
 @app.post("/upload/", status_code=200)
 async def file_upload(pdf_file: UploadFile, tags: list[str] = Form(), collection: str = "default"):
-    if os.path.exists("./files"):
+    if not os.path.exists("./files"):
         os.mkdir("./files")
 
     file_tags = str(json.dumps({"tags": tags}))

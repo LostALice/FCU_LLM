@@ -13,11 +13,10 @@ from text2vec import SentenceModel
 from pprint import pformat
 from numpy import ndarray
 from typing import Union
-from os import getenv
 
 import logging
 import opencc
-
+import os
 
 class MySQLHandler(SetupMYSQL):
     def __init__(self) -> None:
@@ -130,7 +129,7 @@ class DocsHandler(object):
 
 class VectorHandler(object):
     def __init__(self) -> None:
-        self.HF_embedding_model = getenv("HF_EMBEDDING_MODEL")
+        self.HF_embedding_model = os.getenv("HF_EMBEDDING_MODEL")
         self.embedding = SentenceModel(self.HF_embedding_model)
 
     def encoder(self, text: str) -> ndarray:
@@ -142,8 +141,13 @@ class RAGHandler(object):
         self.template = "你是一個逢甲大學的學生助理，你只需要回答關於學分，課程，老師等有關資料，不需要回答學分，課程，老師以外的問題。你現在有以下資料 {context} 根據上文回答問題: {question} 你的回答"
         self.prompt_template = PromptTemplate.from_template(self.template)
 
+        self.llm_model = f"""./model/{os.getenv("LLM_MODEL")}"""
+        if not os.path.isfile(self.llm_model):
+            logging.error(pformat("FileNotFoundError"))
+            raise FileNotFoundError
+
         self.llm = LlamaCpp(
-            model_path="./model/Llama3-8B-Chinese-Chat-q8.gguf",
+            model_path=f"""./model/{os.getenv("LLM_MODEL")}""",
             n_gpu_layers=-1,
             n_ctx=0,
             verbose=True
