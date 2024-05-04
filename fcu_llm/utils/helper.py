@@ -19,7 +19,18 @@ class MySQLHandler(SetupMYSQL):
     def __init__(self) -> None:
         super().__init__()
 
-    def insert_file(self, file_uuid: str, filename: str, tags: str, collection: str) -> bool:
+    def insert_file(self, file_uuid: str, filename: str, tags: str, collection: str = "default") -> bool:
+        """insert a file record into the database
+
+        Args:
+            file_uuid (str): file uuid
+            filename (str): filenames
+            tags (str): file tags
+            collection (str, optional): insert into which collection. Defaults to "default".
+
+        Returns:
+            bool: success or failure
+        """
         logging.debug(
             pformat(f"insert_file {file_uuid} {filename} {tags} {collection}"))
 
@@ -41,6 +52,20 @@ class MySQLHandler(SetupMYSQL):
         sent_by: str,
         file_ids: list[str] | None = None,
     ) -> bool:
+        """inserts a new record during chatting
+
+        Args:
+            chat_id (str): chatroom id
+            qa_id (str): question id
+            question (str): context of the question
+            answer (str): context of the answer
+            token_size (int): question token size
+            sent_by (str): user id
+            file_ids (list[str] | None, optional): answer included files. Defaults to None.
+
+        Returns:
+            bool: success or failure
+        """
 
         logging.debug(pformat({
             "chat_id": chat_id,
@@ -77,20 +102,30 @@ class MySQLHandler(SetupMYSQL):
 
         return success
 
-    def commit(self, commit_sql: bool = True) -> bool:
+    def commit(self, close_connection: bool = False) -> bool:
+        """commit a transaction or not then rollback
+
+        Args:
+            close_connection (bool, optional): close connection. Defaults to True.
+
+        Returns:
+            bool: success or failure
+        """
         try:
-            if commit_sql:
-                logging.debug(pformat(
-                    f"committed sql: {str(self.cursor.statement)}"
-                ))
-                self.connection.commit()
+            logging.debug(pformat(
+                f"committed sql: {str(self.cursor.statement)}"
+            ))
+            self.connection.commit()
+            logging.debug(pformat("Mysql committed"))
+            return True
         except Exception as error:
             logging.error(error)
             self.connection.rollback()
             return False
         finally:
-            logging.debug(pformat("Mysql committed"))
-            return True
+            if close_connection:
+                self.connection.close()
+                logging.debug(pformat("Mysql connection closed"))
 
 
 class MilvusHandler(SetupMilvus):
@@ -99,18 +134,31 @@ class MilvusHandler(SetupMilvus):
 
     def insert_sentence(
         self,
-        pdf_filename: str,
+        docs_filename: str,
         vector: ndarray,
         content: str,
         file_uuid: str,
         collection: str = "default",
         remove_duplicates: bool = True
     ) -> dict:
+        """insert a sentence(regulations) from docs
+
+        Args:
+            docs_filename (str): docs filename
+            vector (ndarray): vector of sentences
+            content (str): docs content
+            file_uuid (str): file_uuid
+            collection (str, optional): insert into which collection. Defaults to "default".
+            remove_duplicates (bool, optional): remove duplicates vector in database. Defaults to True.
+
+        Returns:
+            dict: _description_
+        """
         # fix duplicates
         if remove_duplicates:
             is_duplicates = self.milvus_client.query(
                 collection_name=collection,
-                filter=f"""(source == "{pdf_filename}
+                filter=f"""(source == "{docs_filename}
                             ") and (content == "{content}")"""
             )
 
@@ -124,7 +172,7 @@ class MilvusHandler(SetupMilvus):
         success = self.milvus_client.insert(
             collection_name=collection,
             data={
-                "source": str(pdf_filename),
+                "source": str(docs_filename),
                 "vector": vector,
                 "content": content,
                 "file_uuid": file_uuid
@@ -136,11 +184,21 @@ class MilvusHandler(SetupMilvus):
     def search_similarity(
         self,
         question_vector: ndarray,
-        collection_name: str = "default",
+        collection: str = "default",
         limit: int = 10
     ) -> dict[list[str], list[str], list[int]]:
+        """search for similarity using answer from user and vector database
 
-        docs_results = self.milvus_client.search(collection_name=collection_name, data=[
+        Args:
+            question_vector (ndarray): vector of question
+            collection (str, optional): the collection of searching. Defaults to "default".
+            limit (int, optional): number of rows to return. Defaults to 10.
+
+        Returns:
+            regulations[source, content, file_uuid]: list of regulations including source(filename), content(content in file) and file_uuid
+        """
+
+        docs_results = self.milvus_client.search(collection_name=collection, data=[
                                                  question_vector], limit=limit)[0]
         logging.info(f"docs_results: {docs_results}")
 
@@ -170,6 +228,17 @@ class FileHandler(object):
         ...
 
     def pdf_splitter(self, document_path: str) -> list[str]:
+        """split document(pdf) into lines for tokenize
+
+        Args:
+            document_path (str): document path
+
+        Raises:
+            FormatError: pdf file error or not a pdf file
+
+        Returns:
+            list[str]: list of lines
+        """
         if not document_path.endswith(".pdf"):
             raise FormatError("Supported formats: .pdf")
 
@@ -188,11 +257,20 @@ class VectorHandler(object):
         self.embedding = SentenceModel(self.HF_embedding_model)
 
     def encoder(self, text: str) -> ndarray:
+        """convert text to ndarray (vector)
+
+        Args:
+            text (str): text to be converted
+
+        Returns:
+            ndarray: numpy array (vector)
+        """
         return self.embedding.encode(text)
 
 
 class RAGHandler(object):
     def __init__(self) -> None:
+
         self.model = Llama(
             model_path=f"""./model/{os.getenv("LLM_MODEL")}""",
             verbose=False,
@@ -207,10 +285,21 @@ class RAGHandler(object):
     def token_counter(self, prompt: str) -> int:
         return len(self.model.tokenize(prompt.encode("utf-8")))
 
-    def response(self, question: str, regulations: list, max_tokens: int = 8192):
+    def response(self, question: str, regulations: list, max_tokens: int = 8192) -> tuple[str | int]:
+        """response from RAG
+
+        Args:
+            question (str): question from user
+            regulations (list): regulations from database
+            max_tokens (int, optional): max token allowed. Defaults to 8192.
+
+        Returns:
+            answer: response from RAG
+            token_size: token size
+        """
         content = self.system_prompt.format(regulations=" ".join(regulations))
 
-        token_count = self.token_counter(content)
+        token_size = self.token_counter(content)
 
         message = [
             {
@@ -229,7 +318,7 @@ class RAGHandler(object):
             max_tokens=max_tokens,
         )["choices"][0]["message"]["content"]
 
-        return self.converter.convert(output), token_count
+        return self.converter.convert(output), token_size
 
 
 if __name__ == "__main__":

@@ -65,13 +65,23 @@ async def login():
 
 
 @app.post("/upload/", status_code=200)
-async def file_upload(pdf_file: UploadFile, tags: list[str] = Form(), collection: str = "default"):
+async def file_upload(docs_file: UploadFile, tags: list[str] = Form(), collection: str = "default"):
+    """upload a docs file
+
+    Args:
+        docs_file (UploadFile): docs file
+        tags (list[str], optional): file tags. Defaults to Form().
+        collection (str, optional): insert into collection. Defaults to "default".
+
+    Returns:
+        file_id: file uuid
+    """
     file_tags = str(json.dumps({"tags": tags}))
-    filename = str(pdf_file.filename)
+    filename = str(docs_file.filename)
     file_uuid = str(uuid.uuid4())
 
-    logging.debug(pformat(f"""pdf_file: {filename} file_uuid: {
-                  file_uuid} tags: {file_tags}"""))
+    logging.debug(
+        pformat(f"""docs_file: {filename} file_uuid: {file_uuid} tags: {file_tags}"""))
 
     # exclude non pdf files
     if not filename.endswith(".pdf"):
@@ -79,7 +89,7 @@ async def file_upload(pdf_file: UploadFile, tags: list[str] = Form(), collection
         return HTTPException(status_code=200, detail="Invalid file type")
 
     # save uploaded pdf file
-    pdf_contents = pdf_file.file.read()
+    pdf_contents = docs_file.file.read()
     with open(f"./files/{file_uuid}.pdf", "wb") as f:
         f.write(pdf_contents)
 

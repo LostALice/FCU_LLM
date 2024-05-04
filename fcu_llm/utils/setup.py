@@ -33,7 +33,6 @@ class SetupMYSQL(object):
                 logging.warning("Dropping database")
                 self.cursor.execute(f"DROP DATABASE {self.DATABASE}")
                 self.create_database()
-
         except connector.Error as error:
             logging.error(error)
             logging.debug(pformat(f"Creating MYSQL database {self.DATABASE}"))
