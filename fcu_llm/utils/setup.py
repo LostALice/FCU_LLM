@@ -29,6 +29,11 @@ class SetupMYSQL(object):
 
         try:
             self.connection.database = getenv("MYSQL_DATABASE")
+            if getenv("MYSQL_DEBUG") == "True":
+                logging.warning("Dropping database")
+                self.cursor.execute(f"DROP DATABASE {self.DATABASE}")
+                self.create_database()
+
         except connector.Error as error:
             logging.error(error)
             logging.debug(pformat(f"Creating MYSQL database {self.DATABASE}"))
@@ -95,13 +100,14 @@ class SetupMYSQL(object):
         # FILE table
         self.cursor.execute(
             """
-            CREATE TABLE `file` (
+            CREATE TABLE `FCU_LLM`.`file` (
                 `file_id` VARCHAR(45) NOT NULL,
+                `collection` VARCHAR(45) NOT NULL DEFAULT "default",
                 `file_name` VARCHAR(255) NOT NULL,
                 `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
                 `expired` TINYINT NOT NULL DEFAULT '1',
                 `tags` JSON NOT NULL DEFAULT (JSON_OBJECT()),
-                PRIMARY KEY (`file_id`)
+                PRIMARY KEY (`file_id`, `collection`)
             )
             """
         )
@@ -111,11 +117,25 @@ class SetupMYSQL(object):
             """
             CREATE TABLE `FCU_LLM`.`qa` (
                 `chat_id` VARCHAR(45) NOT NULL,
-                `content` LONGTEXT NOT NULL,
+                `qa_id` VARCHAR(45) NOT NULL,
+                `question` LONGTEXT NOT NULL,
+                `answer` LONGTEXT NOT NULL,
+                `token_size` INT NOT NULL DEFAULT 0,
                 `sent_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `sent_by` VARCHAR(45) NOT NULL,
-                `file_id` VARCHAR(45) NULL DEFAULT NULL,
                 PRIMARY KEY (`chat_id`)
+            );
+            """
+        )
+
+        # ATTACHMENT table
+        self.cursor.execute(
+            """
+            CREATE TABLE `FCU_LLM`.`attachment` (
+                `chat_id` VARCHAR(45) NOT NULL,
+                `qa_id` VARCHAR(45) NOT NULL,
+                `file_id` VARCHAR(45) NOT NULL,
+                PRIMARY KEY (`qa_id`, `file_id`)
             );
             """
         )
@@ -134,10 +154,19 @@ class SetupMilvus(object):
             uri=f"http://{self.HOST}:{self.PORT}"
         )
 
-        loading_status = self.milvus_client.get_load_state(
-            collection_name=self.default_collection_name
-        )
-        logging.debug(pformat(f"""Milvus loading collection `{self.default_collection_name}`: {loading_status["state"]}"""))
+        try:
+            if getenv("MILVUS_DEBUG") == "True":
+                logging.warning("Dropping collection")
+                self.milvus_client.drop_collection(
+                    collection_name=self.default_collection_name
+                )
+        finally:
+            loading_status = self.milvus_client.get_load_state(
+                collection_name=self.default_collection_name
+            )
+
+        logging.debug(pformat(f"""Milvus loading collection `{
+                      self.default_collection_name}`: {loading_status["state"]}"""))
 
         if not loading_status or loading_status["state"] == loading_status["state"].NotExist:
             logging.error("Milvus collection not loaded")
@@ -149,7 +178,7 @@ class SetupMilvus(object):
         self,
         collection_name: str,
         index_type: Literal["FLAT", "IVF_FLAT", "IVF_SQ8", "IVF_PQ", "HNSW",
-                            "ANNOY", "RHNSW_FLAT", "RHNSW_PQ", "RHNSW_SQ"] = "IVF_FLAT",
+                                    "ANNOY", "RHNSW_FLAT", "RHNSW_PQ", "RHNSW_SQ"] = "IVF_FLAT",
         metric_type: Literal["L2", "IP"] = "L2"
     ) -> Dict:
 
@@ -160,8 +189,11 @@ class SetupMilvus(object):
 
         schema.add_field(field_name="id", datatype=DataType.VARCHAR,
                          max_length=512, is_primary=True)
+        # file_id
         schema.add_field(field_name="source",
                          datatype=DataType.VARCHAR, max_length=1024)
+        schema.add_field(field_name="file_uuid",
+                         datatype=DataType.VARCHAR, max_length=36)
         schema.add_field(field_name="content", datatype=DataType.VARCHAR,
                          max_length=2048)
         schema.add_field(field_name="vector",
@@ -191,9 +223,3 @@ class SetupMilvus(object):
 
         logging.debug(pformat(f"Creating collection: {collection_name}"))
         return collection_status
-
-
-# class SetupRAG(object):
-#     def __init__(self) -> None:
-#         self.LLM_model = getenv("LLM_MODEL_PATH")
-#         self.embedded_model = getenv("EMBEDDING_MODEL_PATH")

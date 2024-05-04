@@ -9,32 +9,80 @@ from text2vec import SentenceModel
 from llama_cpp import Llama
 from pprint import pformat
 from numpy import ndarray
-from typing import Union
 
 import logging
 import opencc
 import os
 
+
 class MySQLHandler(SetupMYSQL):
     def __init__(self) -> None:
         super().__init__()
 
-    def insert_file(self, file_uuid: str, filename: str, tags: str) -> bool:
-        logging.debug(pformat("insert_file {file_uuid} {filename} {tags}"))
+    def insert_file(self, file_uuid: str, filename: str, tags: str, collection: str) -> bool:
+        logging.debug(
+            pformat(f"insert_file {file_uuid} {filename} {tags} {collection}"))
+
         self.cursor.execute("""
-            INSERT INTO file (file_id, file_name, tags)
+            INSERT INTO file (file_id, file_name, tags, collection)
             VALUES (
-                %s, %s, %s
-            );""", (file_uuid, filename, tags))
+                %s, %s, %s, %s
+            );""", (file_uuid, filename, tags, collection))
 
         return self.commit()
 
-    def insert_chatroom(self, message: str, chatroom_id: str) -> bool: ...
+    def insert_chatting(
+        self,
+        chat_id: str,
+        qa_id: str,
+        question: str,
+        answer: str,
+        token_size: int,
+        sent_by: str,
+        file_ids: list[str] | None = None,
+    ) -> bool:
+
+        logging.debug(pformat({
+            "chat_id": chat_id,
+            "qa_id": qa_id,
+            "question": question,
+            "answer": answer,
+            "token_size": token_size,
+            "sent_by": sent_by,
+            "file_ids": file_ids,
+        }))
+
+        self.cursor.execute("""
+            INSERT INTO `FCU_LLM`.`qa` (chat_id, qa_id, question, answer, token_size, sent_by)
+            VALUES (
+                %s, %s, %s, %s, %s, %s
+            );
+        """, (chat_id, qa_id, question, answer, token_size, sent_by))
+
+        success = self.commit()
+
+        if not success:
+            return success
+
+        if not file_ids is None:
+            for file_id in set(file_ids):
+                self.cursor.execute("""
+                    INSERT INTO `FCU_LLM`.`attachment` (chat_id, qa_id, file_id)
+                    VALUES (
+                        %s, %s, %s
+                    );
+                """, (chat_id, qa_id, file_id))
+            success = self.commit()
+            assert success
+
+        return success
 
     def commit(self, commit_sql: bool = True) -> bool:
         try:
             if commit_sql:
-                logging.debug(pformat(f"committed sql: {str(self.cursor.statement)}"))
+                logging.debug(pformat(
+                    f"committed sql: {str(self.cursor.statement)}"
+                ))
                 self.connection.commit()
         except Exception as error:
             logging.error(error)
@@ -43,8 +91,6 @@ class MySQLHandler(SetupMYSQL):
         finally:
             logging.debug(pformat("Mysql committed"))
             return True
-
-
 
 
 class MilvusHandler(SetupMilvus):
@@ -56,6 +102,7 @@ class MilvusHandler(SetupMilvus):
         pdf_filename: str,
         vector: ndarray,
         content: str,
+        file_uuid: str,
         collection: str = "default",
         remove_duplicates: bool = True
     ) -> dict:
@@ -63,7 +110,8 @@ class MilvusHandler(SetupMilvus):
         if remove_duplicates:
             is_duplicates = self.milvus_client.query(
                 collection_name=collection,
-                filter=f"""(source == "{pdf_filename}") and (content == "{content}")"""
+                filter=f"""(source == "{pdf_filename}
+                            ") and (content == "{content}")"""
             )
 
             if is_duplicates:
@@ -79,18 +127,27 @@ class MilvusHandler(SetupMilvus):
                 "source": str(pdf_filename),
                 "vector": vector,
                 "content": content,
+                "file_uuid": file_uuid
             }
         )
 
         return success
 
-    def search_similarity(self, question_vector: ndarray, collection_name: str ="default", limit: int = 10) -> dict[list, list]:
-        docs_results = self.milvus_client.search(collection_name=collection_name, data=[question_vector], limit=limit)[0]
+    def search_similarity(
+        self,
+        question_vector: ndarray,
+        collection_name: str = "default",
+        limit: int = 10
+    ) -> dict[list[str], list[str], list[int]]:
+
+        docs_results = self.milvus_client.search(collection_name=collection_name, data=[
+                                                 question_vector], limit=limit)[0]
         logging.info(f"docs_results: {docs_results}")
 
         regulations = {
             "source": [],
             "content": [],
+            "file_uuid": [],
         }
 
         for _ in docs_results:
@@ -101,13 +158,14 @@ class MilvusHandler(SetupMilvus):
 
             regulations["source"].append(file_["source"])
             regulations["content"].append(file_["content"])
+            regulations["file_uuid"].append(file_["file_uuid"])
 
         logging.debug(pformat(regulations))
 
         return regulations
 
 
-class DocsHandler(object):
+class FileHandler(object):
     def __init__(self) -> None:
         ...
 
@@ -146,8 +204,13 @@ class RAGHandler(object):
 
         self.converter = opencc.OpenCC("s2tw.json")
 
+    def token_counter(self, prompt: str) -> int:
+        return len(self.model.tokenize(prompt.encode("utf-8")))
+
     def response(self, question: str, regulations: list, max_tokens: int = 8192):
         content = self.system_prompt.format(regulations=" ".join(regulations))
+
+        token_count = self.token_counter(content)
 
         message = [
             {
@@ -166,25 +229,8 @@ class RAGHandler(object):
             max_tokens=max_tokens,
         )["choices"][0]["message"]["content"]
 
-        return self.converter.convert(output)
+        return self.converter.convert(output), token_count
 
-    # # unused
-    # def chat(self, system: list[dict[str]], user: list[dict[str]], max_tokens: int = 8192):
-    #     if len(system) != len(user):
-    #         raise ChatNotEqualError
-
-    #     message = []
-    #     for answer, question in zip(system, user):
-    #         message.append(answer)
-    #         message.append(question)
-
-    #     output = self.model.create_chat_completion(
-    #         message,
-    #         stop=["<|eot_id|>", "<|end_of_text|>"],
-    #         max_tokens=max_tokens,
-    #     )["choices"][0]["message"]["content"]
-
-    #     return self.converter.convert(output)
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
