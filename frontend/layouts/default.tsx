@@ -2,6 +2,8 @@ import { Navbar } from "@/components/navbar";
 import { Link } from "@nextui-org/link";
 import { Head } from "./head";
 
+import Transition from "@/components/transition";
+
 export default function DefaultLayout({
 	children,
 }: {
@@ -12,7 +14,9 @@ export default function DefaultLayout({
 			<Head />
 			<Navbar />
 			<main className="container mx-auto max-w-7xl px-6 flex-grow pt-16">
-				{children}
+				<Transition>
+					{children}
+				</Transition>
 			</main>
 			<footer className="w-full flex items-center justify-center py-3">
 				<Link
@@ -21,8 +25,7 @@ export default function DefaultLayout({
 					href="https://github.com/LostALice"
 					title="Do you know the magic?"
 				>
-					<span className="text-default-600">Powered by</span>
-					<p className="text-primary">TyrantRey</p>
+					<span className="italic">Copyright © Aki.no.Alice@TyrantRey 張紹謙 2022-2026</span>
 				</Link>
 			</footer>
 		</div>
