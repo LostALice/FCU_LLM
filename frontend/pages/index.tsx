@@ -27,27 +27,28 @@ export default function MainPage() {
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           {siteConfig.mainPageItems.map((item) => (
             <Card
-            shadow="md"
-            isPressable={true}
-            className="flex-1 w-full md:h-auto rounded-xl font-sans text-white dark:text-slate-300"
-          >
-            <div className="h-full hover:scale-110 hover:transform duration-300">
-              <NextLink color="foreground" href={item.href}>
-                <CardBody className="absolute h-full z-10 flex-col justify-center items-center p-0">
-                  <span className="font-bold text-2xl md:text-3xl text-center bg-transparent">
-                    {item.title}
-                  </span>
-                  <span className="text-center p-1">{item.descriptions}</span>
-                </CardBody>
-              </NextLink>
-              <Image
-                removeWrapper={true}
-                className="z-0 h-full object-cover"
-                src={item.image}
-                alt={item.alt}
-              />
-            </div>
-          </Card>
+              shadow="md"
+              isPressable={true}
+              className="flex-1 w-full md:h-auto rounded-xl font-sans text-white dark:text-slate-300"
+              key={item.href}
+            >
+              <div className="h-full hover:scale-110 hover:transform duration-300">
+                <NextLink color="foreground" href={item.href}>
+                  <CardBody className="absolute h-full z-10 flex-col justify-center items-center p-0">
+                    <span className="font-bold text-2xl md:text-3xl text-center bg-transparent">
+                      {item.title}
+                    </span>
+                    <span className="text-center p-1">{item.descriptions}</span>
+                  </CardBody>
+                </NextLink>
+                <Image
+                  removeWrapper={true}
+                  className="z-0 h-full object-cover"
+                  src={item.image}
+                  alt={item.alt}
+                />
+              </div>
+            </Card>
           ))}
         </div>
       </section>
