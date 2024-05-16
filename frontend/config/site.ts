@@ -18,14 +18,14 @@ export const siteConfig = {
     },
     mainPageItems: [
         {
-            href: "./docs",
+            href: "/docs",
             title: "文檔",
             descriptions: "閱讀文檔",
             image: "https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg",
             alt: "docs"
         },
         {
-            href: "./chat",
+            href: "/chat",
             title: "問答",
             descriptions: "開始對話",
             image: "https://images.pexels.com/photos/374720/pexels-photo-374720.jpeg",

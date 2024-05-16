@@ -32,7 +32,7 @@ export default function MainPage() {
             className="flex-1 w-full md:h-auto rounded-xl font-sans text-white dark:text-slate-300"
           >
             <div className="h-full hover:scale-110 hover:transform duration-300">
-              <NextLink color="foreground" href="./docs">
+              <NextLink color="foreground" href={item.href}>
                 <CardBody className="absolute h-full z-10 flex-col justify-center items-center p-0">
                   <span className="font-bold text-2xl md:text-3xl text-center bg-transparent">
                     {item.title}
