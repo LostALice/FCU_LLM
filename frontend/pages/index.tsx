@@ -1,5 +1,5 @@
 import { title } from "@/components/primitives";
-import DefaultLayout from "@/layouts/default";
+import DefaultLayout from "@/layouts/default"
 import { siteConfig } from "@/config/site";
 
 import NextLink from "next/link";
@@ -34,7 +34,7 @@ export default function MainPage() {
             >
               <div className="h-full hover:scale-110 hover:transform duration-300">
                 <NextLink color="foreground" href={item.href}>
-                  <CardBody className="absolute h-full z-10 flex-col justify-center items-center p-0">
+                  <CardBody className="absolute h-full z-10 flex-col justify-center items-center p-0 brightness-[1]">
                     <span className="font-bold text-2xl md:text-3xl text-center bg-transparent">
                       {item.title}
                     </span>

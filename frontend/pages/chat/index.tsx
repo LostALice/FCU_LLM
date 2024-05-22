@@ -1,43 +1,88 @@
-import DefaultLayout from "@/layouts/default";
+import { useState, useEffect } from 'react'
 
-import { Card, CardHeader, CardBody, CardFooter } from "@nextui-org/card";
+import { MessageBox } from "@/components/message-box"
+import DefaultLayout from "@/layouts/default"
+import { siteConfig } from "@/config/site"
+
+import { Card, CardHeader, CardBody } from "@nextui-org/card";
 import { ScrollShadow } from "@nextui-org/react";
+import { Tooltip } from "@nextui-org/tooltip";
+import { Textarea } from "@nextui-org/input";
 import { Button } from "@nextui-org/button";
-import { Input } from "@nextui-org/input";
+
+interface messageInfo {
+  messageID: number;
+  messageContent: string;
+  attachments: Array<string>;
+  time: string;
+}
 
 export default function ChatPage() {
+  const [inputQuestion, setInputQuestion] = useState("");
+  const [chatMessage, setChatMessage] = useState<messageInfo[]>([]);
+  const [chatUUID, setChatUUID] = useState<string>("");
+  const [isLoading, setLoading] = useState(true)
+
+  function sendMessage(event: React.MouseEvent<HTMLButtonElement>) {
+    if (inputQuestion == "") {
+      return
+    }
+
+    const message: messageInfo = {
+      messageID: Math.floor(Math.random() * 100),
+      messageContent: inputQuestion,
+      attachments: ["asd", "dsa"],
+      time: new Date().toDateString()
+    }
+
+    setChatMessage([...chatMessage, message])
+    setInputQuestion("")
+  }
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(siteConfig.api_url + "/uuid")
+      .then((res) => res.json())
+      .then((data) => {
+        setChatUUID(data)
+        setLoading(false)
+      })
+  }, [])
+
   return (
     <DefaultLayout>
-      <Card className="flex flex-col items-center justify-center w-full h-[50em] border-1">
-        <CardHeader className="border-b-1 justify-between h-[3em]">
-          <span>ChatId: asdasd</span>
-          <span>機械人可能會出錯。請參考文檔核對重要資訊。</span>
-          <span>User: asdasd</span>
+      <Card className="flex flex-col items-center justify-center w-full h-[50rem] border-1">
+        <CardHeader className="grid grid-cols-1 border-b-1 h-[3em] overflow-hidden lg:grid-cols-3">
+          <span className="text-start hidden lg:block">{chatUUID}</span>
+          <span className="text-center text-small">機械人可能會出錯。請參考文檔核對重要資訊。</span>
+          <span className="text-end hidden lg:block">使用者: 未登入</span>
         </CardHeader>
-
         <CardBody className="justify-between">
-          <ScrollShadow className="w-full h-full">
-            <div className="flex w-full mt-2 space-x-3 max-w-md">
-              <div className="p-3 rounded-r-lg rounded-bl-lg bg-blue-600 text-white p-3">
-                <p className="text-md">
-                  {/* {message} */}
-                  \asd
-                </p>
-              </div>
-            </div>
-            <div className="flex w-full mt-2 space-x-3 max-w-xs ml-auto justify-end">
-              <div>
-                <div className="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg">
-                  <p className="text-md">
-                    askdjguaosdg
-                  </p>
-                </div>
-              </div>
-            </div>
+          <ScrollShadow className="w-full h-full items-center">
+            {chatMessage.map((item) => (
+              <MessageBox
+                key={item.messageID}
+                message={item.messageContent}
+                attachments={item.attachments}
+                time={item.time}
+              />
+            ))}
           </ScrollShadow>
         </CardBody>
-
-        <CardFooter className="border-t-1 justify-between h-[3em]"></CardFooter>
+        <div className="flex justify-between w-[90%] h-[3rem] mb-2">
+          <Textarea
+            name="question"
+            className="h-[2rem] w-full"
+            placeholder="開始提問"
+            value={inputQuestion}
+            onValueChange={setInputQuestion}
+          />
+          <Button
+            disabled={chatMessage: disabled = true}
+            onClick={sendMessage}>
+            送出
+          </Button>
+        </div>
       </Card>
     </DefaultLayout>
   );

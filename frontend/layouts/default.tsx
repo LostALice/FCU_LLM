@@ -13,7 +13,7 @@ export default function DefaultLayout({
 		<div className="relative flex flex-col h-screen">
 			<Head />
 			<Navbar />
-			<main className="container mx-auto max-w-7xl px-6 flex-grow pt-16">
+			<main className="container mx-auto max-w-7xl px-3 flex-grow pt-8">
 				<Transition>
 					{children}
 				</Transition>
@@ -21,7 +21,7 @@ export default function DefaultLayout({
 			<footer className="w-full flex items-center justify-center py-3">
 				<Link
 					isExternal
-					className="flex items-center gap-1 text-current"
+					className="flex items-center gap-1 text-current px-3"
 					href="https://github.com/LostALice"
 					title="Do you know the magic?"
 				>
