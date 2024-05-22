@@ -76,9 +76,10 @@ export default function ChatPage() {
             placeholder="開始提問"
             value={inputQuestion}
             onValueChange={setInputQuestion}
+            disabled={isLoading ? true : false}
           />
           <Button
-            disabled={chatMessage: disabled = true}
+            disabled={chatMessage ? false : true}
             onClick={sendMessage}>
             送出
           </Button>
