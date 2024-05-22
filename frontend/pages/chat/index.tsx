@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, FC } from 'react'
 
 import { MessageBox } from "@/components/message-box"
 import DefaultLayout from "@/layouts/default"
@@ -6,42 +6,48 @@ import { siteConfig } from "@/config/site"
 
 import { Card, CardHeader, CardBody } from "@nextui-org/card";
 import { ScrollShadow } from "@nextui-org/react";
-import { Tooltip } from "@nextui-org/tooltip";
+import { Skeleton } from "@nextui-org/skeleton";
+// import { Spinner } from "@nextui-org/spinner";
 import { Textarea } from "@nextui-org/input";
 import { Button } from "@nextui-org/button";
 
-interface messageInfo {
-  messageID: number;
-  messageContent: string;
-  attachments: Array<string>;
-  time: string;
-}
+import { MessageInfo } from "@/types";
+import { askQuestion } from "@/pages/api/api"
 
 export default function ChatPage() {
-  const [inputQuestion, setInputQuestion] = useState("");
-  const [chatMessage, setChatMessage] = useState<messageInfo[]>([]);
-  const [chatUUID, setChatUUID] = useState<string>("");
-  const [isLoading, setLoading] = useState(true)
+  const [inputQuestion, setInputQuestion] = useState<string>("")
+  const [chatInfo, setChatInfo] = useState<MessageInfo[]>([])
+  const [chatUUID, setChatUUID] = useState<string>("")
+  const [isLoading, setLoading] = useState<boolean>(true)
 
-  function sendMessage(event: React.MouseEvent<HTMLButtonElement>) {
+  const scrollShadow = useRef<HTMLInputElement>(null)
+
+  async function sendMessage(event: React.MouseEvent<HTMLButtonElement>) {
     if (inputQuestion == "") {
+      console.error("no message")
       return
     }
+    setInputQuestion("")
+    console.log(inputQuestion)
 
-    const message: messageInfo = {
-      messageID: Math.floor(Math.random() * 100),
-      messageContent: inputQuestion,
-      attachments: ["asd", "dsa"],
-      time: new Date().toDateString()
+    const message = await askQuestion(chatUUID, inputQuestion, "Anonymous", "default")
+
+    const message_info: MessageInfo = {
+      chatUUID: chatUUID,
+      questionUUID: message.questionUUID,
+      question: inputQuestion,
+      answer: message.answer,
+      attachments: message.fileIDs,
+      time: new Date().toDateString(),
     }
 
-    setChatMessage([...chatMessage, message])
-    setInputQuestion("")
+    setChatInfo([...chatInfo, message_info])
+    scrollShadow.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }
 
   useEffect(() => {
     setLoading(true)
-    fetch(siteConfig.api_url + "/uuid")
+    fetch(siteConfig.api_url + "/uuid/")
       .then((res) => res.json())
       .then((data) => {
         setChatUUID(data)
@@ -58,11 +64,18 @@ export default function ChatPage() {
           <span className="text-end hidden lg:block">使用者: 未登入</span>
         </CardHeader>
         <CardBody className="justify-between">
-          <ScrollShadow className="w-full h-full items-center">
-            {chatMessage.map((item) => (
+          <ScrollShadow
+            hideScrollBar
+            className="w-full h-full items-center flex-col-reverse"
+            ref={scrollShadow}
+          >
+            {chatInfo.map((item) => (
               <MessageBox
-                key={item.messageID}
-                message={item.messageContent}
+                key={item.questionUUID}
+                chatUUID={chatUUID}
+                questionUUID={item.questionUUID}
+                question={item.question}
+                answer={item.answer}
                 attachments={item.attachments}
                 time={item.time}
               />
@@ -72,6 +85,8 @@ export default function ChatPage() {
         <div className="flex justify-between w-[90%] h-[3rem] mb-2">
           <Textarea
             name="question"
+            radius="sm"
+            minRows={1}
             className="h-[2rem] w-full"
             placeholder="開始提問"
             value={inputQuestion}
@@ -79,7 +94,8 @@ export default function ChatPage() {
             disabled={isLoading ? true : false}
           />
           <Button
-            disabled={chatMessage ? false : true}
+            radius="none"
+            className="rounded-r-lg -ml-3"
             onClick={sendMessage}>
             送出
           </Button>
