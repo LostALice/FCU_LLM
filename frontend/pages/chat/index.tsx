@@ -6,6 +6,7 @@ import { siteConfig } from "@/config/site"
 
 import { Card, CardHeader, CardBody } from "@nextui-org/card";
 import { ScrollShadow } from "@nextui-org/scroll-shadow";
+import { Spinner } from "@nextui-org/spinner";
 import { Textarea } from "@nextui-org/input";
 import { Button } from "@nextui-org/button";
 
@@ -15,18 +16,17 @@ import { askQuestion } from "@/pages/api/api"
 export default function ChatPage() {
   const [inputQuestion, setInputQuestion] = useState<string>("")
   const [chatInfo, setChatInfo] = useState<MessageInfo[]>([])
-  const [isLoading, setLoading] = useState<boolean>(true)
+  const [isLoading, setLoading] = useState<boolean>(false)
   const [chatUUID, setChatUUID] = useState<string>("")
-
   const scrollShadow = useRef<HTMLInputElement>(null)
 
-  async function sendMessage(event: React.MouseEvent<HTMLButtonElement>) {
+  async function sendMessage() {
+    setLoading(true)
     if (inputQuestion == "") {
       console.error("no message")
       return
     }
     setInputQuestion("")
-    console.log(inputQuestion)
 
     const message = await askQuestion(chatUUID, inputQuestion, "Anonymous", "default")
 
@@ -40,16 +40,15 @@ export default function ChatPage() {
     }
 
     setChatInfo([...chatInfo, message_info])
+    setLoading(false)
     scrollShadow.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }
 
   useEffect(() => {
-    setLoading(true)
     fetch(siteConfig.api_url + "/uuid/")
       .then((res) => res.json())
       .then((data) => {
         setChatUUID(data)
-        setLoading(false)
       })
   }, [])
 
@@ -61,6 +60,7 @@ export default function ChatPage() {
           <span className="text-center text-small">機械人可能會出錯。請參考文檔核對重要資訊。</span>
           <span className="text-end hidden lg:block">使用者: 未登入</span>
         </CardHeader>
+
         <CardBody className="justify-between">
           <ScrollShadow
             hideScrollBar
@@ -78,6 +78,7 @@ export default function ChatPage() {
                 time={item.time}
               />
             ))}
+            {isLoading && <div className="flex border rounded-lg border-emerald-600 m-3 justify-center"> <Spinner className="p-3" color="success" size="lg" /> </div>}
           </ScrollShadow>
         </CardBody>
         <div className="flex justify-between w-[90%] h-[3rem] mb-2">

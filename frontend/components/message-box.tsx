@@ -25,7 +25,7 @@ export const MessageBox: FC<MessageInfo> = ({ questionUUID, question, answer, at
 					<span className="">{answer}</span>
 					<Divider className="my-2" />
 					<div className="flex justify-between">
-						<div className="text-left">
+						<div className="flex text-left gap-3">
 							{attachments?.map((attachment) => (
 								<Tooltip
 									content={<span className="text-left">{attachment}</span>}
@@ -39,7 +39,7 @@ export const MessageBox: FC<MessageInfo> = ({ questionUUID, question, answer, at
 										key={attachment}
 										as={Link}
 										showAnchorIcon
-										className="mr-3 text-small w-[7rem] animate-marquee1 whitespace-nowrap"
+										className="text-small w-[7rem] "
 									>
 										<span className="text-left truncate italic">{attachment}</span>
 									</Button>

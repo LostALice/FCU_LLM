@@ -15,7 +15,6 @@ export async function askQuestion(
     collection: string | "default" = "default"
 ): Promise<askQuestionResponseFormat> {
     console.log(chatUUID, question, userID, collection)
-    // const resp = await fetch(siteConfig.api_url + "/uuid/")
     const resp = await fetch(siteConfig.api_url + "/chat/" + chatUUID, {
         method: "POST",
         headers: {
