@@ -158,10 +158,7 @@ class MilvusHandler(SetupMilvus):
         if remove_duplicates:
             is_duplicates = self.milvus_client.query(
                 collection_name=collection,
-                filter=f"""(source == "{docs_filename}
-                            ") and (content == "{content}")"""
-            )
-
+                filter=f"""(source == "{docs_filename}") and (content == "{content}")""")  # nopep8
             if is_duplicates:
                 info = self.milvus_client.delete(
                     collection_name="default",
@@ -184,7 +181,7 @@ class MilvusHandler(SetupMilvus):
     def search_similarity(
         self,
         question_vector: ndarray,
-        collection: str = "default",
+        collection_name: str = "default",
         limit: int = 10
     ) -> dict[list[str], list[str], list[int]]:
         """search for similarity using answer from user and vector database
@@ -198,7 +195,7 @@ class MilvusHandler(SetupMilvus):
             regulations[source, content, file_uuid]: list of regulations including source(filename), content(content in file) and file_uuid
         """
 
-        docs_results = self.milvus_client.search(collection_name=collection, data=[
+        docs_results = self.milvus_client.search(collection_name=collection_name, data=[
                                                  question_vector], limit=limit)[0]
         logging.info(f"docs_results: {docs_results}")
 
