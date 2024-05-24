@@ -1,13 +1,11 @@
-import { useState, useEffect, useRef, FC } from 'react'
+import { useState, useEffect, useRef } from "react"
 
 import { MessageBox } from "@/components/message-box"
 import DefaultLayout from "@/layouts/default"
 import { siteConfig } from "@/config/site"
 
 import { Card, CardHeader, CardBody } from "@nextui-org/card";
-import { ScrollShadow } from "@nextui-org/react";
-import { Skeleton } from "@nextui-org/skeleton";
-// import { Spinner } from "@nextui-org/spinner";
+import { ScrollShadow } from "@nextui-org/scroll-shadow";
 import { Textarea } from "@nextui-org/input";
 import { Button } from "@nextui-org/button";
 
@@ -17,8 +15,8 @@ import { askQuestion } from "@/pages/api/api"
 export default function ChatPage() {
   const [inputQuestion, setInputQuestion] = useState<string>("")
   const [chatInfo, setChatInfo] = useState<MessageInfo[]>([])
-  const [chatUUID, setChatUUID] = useState<string>("")
   const [isLoading, setLoading] = useState<boolean>(true)
+  const [chatUUID, setChatUUID] = useState<string>("")
 
   const scrollShadow = useRef<HTMLInputElement>(null)
 
