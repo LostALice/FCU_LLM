@@ -17,12 +17,12 @@ import { Logo } from "@/components/icons";
 
 export const Navbar = () => {
   return (
-    <NextUINavbar maxWidth="xl" position="sticky" className="-mb-3" shouldHideOnScroll>
+    <NextUINavbar maxWidth="xl" position="sticky" className="h-[10svh]" shouldHideOnScroll>
       <NavbarContent className="basis-1/5 sm:basis-full" justify="start">
         <NavbarBrand className="gap-3 max-w-fit">
           <NextLink className="flex justify-start items-center gap-1" href="/">
             <Logo />
-            <p className="font-bold text-inherit">逢甲大學課程問答機械人</p>
+            <p className="font-bold text-inherit px-1">逢甲大學課程問答機械人</p>
           </NextLink>
         </NavbarBrand>
 

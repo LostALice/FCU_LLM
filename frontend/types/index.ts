@@ -12,3 +12,8 @@ export interface MessageInfo {
   time: string;
   attachments: Array<string>;
 }
+
+export interface DepartmentList {
+  departmentName: string;
+  departmentID: string;
+}

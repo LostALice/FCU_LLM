@@ -49,12 +49,12 @@ export default function ChatPage() {
       .then((res) => res.json())
       .then((data) => {
         setChatUUID(data)
-      })
+    })
   }, [])
 
   return (
     <DefaultLayout>
-      <Card className="flex flex-col items-center justify-center w-full h-[50rem] border-1">
+      <Card className="flex flex-col items-center justify-center h-[50rem] w-full border-1">
         <CardHeader className="grid grid-cols-1 border-b-1 h-[3em] overflow-hidden lg:grid-cols-3">
           <span className="text-start hidden lg:block">{chatUUID}</span>
           <span className="text-center text-small">機械人可能會出錯。請參考文檔核對重要資訊。</span>

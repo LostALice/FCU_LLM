@@ -1,5 +1,7 @@
 import DefaultLayout from "@/layouts/default";
-import { useState } from "react";
+import { useState, useEffect} from "react";
+
+import { DepartmentList } from "@/types";
 
 import { Listbox, ListboxItem } from "@nextui-org/listbox";
 import { ScrollShadow } from "@nextui-org/scroll-shadow";
@@ -14,8 +16,8 @@ import {
 } from "@nextui-org/table";
 
 export default function DocsPage() {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [department, setDepartment] = useState<string[]>([]);
   const [fileList, setFileList] = useState<string[]>([]);
 
   const list = {
@@ -31,39 +33,43 @@ export default function DocsPage() {
     ],
   };
 
+  useEffect(() => {
+    async () => {
+      setDepartment([...department]);
+    };
+  }, []);
+
+  // const departmentList = department.map(item => {
+  //   <ListboxItem className="truncate" key={item}>
+  //     {item}
+  //   </ListboxItem>;
+  // })
+
   return (
     <DefaultLayout>
-      {/* <section className="flex flex-col items-center justify-center gap-4">
-        <div className="inline-block max-w-lg text-center justify-center">
-          <h1 className={title()}>文檔</h1>
-        </div>
-      </section> */}
-
-      <div className="flex h-[50rem]">
-        <ScrollShadow className="w-[15rem]" size={30}>
+      <div className="flex">
+        <ScrollShadow className="w-[10rem]" size={30}>
           <Listbox
             aria-label="Actions"
-            className="h-full"
+            className="h-full "
             onAction={(key) => console.log(key)}
             variant="flat"
             selectionMode="single"
+            emptyContent={<Spinner color="success" label="加載中..." />}
           >
-            <ListboxItem key="new">New file</ListboxItem>
-            <ListboxItem key="copy">Copy link</ListboxItem>
-            <ListboxItem key="edit">Edit file</ListboxItem>
-            <ListboxItem key="delete">Delete file</ListboxItem>
+            <ListboxItem key="new">new file</ListboxItem>
           </Listbox>
         </ScrollShadow>
 
         <Table aria-label="file table">
           <TableHeader>
-            <TableColumn key="name">Name</TableColumn>
-            <TableColumn key="height">Height</TableColumn>
+            <TableColumn key="name">文件名稱</TableColumn>
+            <TableColumn key="height">最後更新日期</TableColumn>
           </TableHeader>
           <TableBody
             items={list.items}
             isLoading={isLoading}
-            loadingContent={<Spinner label="Loading..." />}
+            loadingContent={<Spinner color="success" label="加載中..." />}
           >
             {(item) => (
               <TableRow key={item.name}>
