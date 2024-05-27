@@ -12,6 +12,9 @@ from utils.helper import (
     FileHandler,
     RAGHandler,
 )
+from utils.model import (
+    QuestioningModel
+)
 
 from pprint import pformat
 from utils.error import *
@@ -35,7 +38,7 @@ logging.getLogger("multipart").propagate = False
 app = FastAPI(debug=True)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["localhost", "127.0.0.1"],  # can alter with time
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # can alter with time
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,15 +47,22 @@ app.add_middleware(
 
 class UtilsLoader(object):
     def __init__(self) -> None:
-        self.encoder_client = VectorHandler()
         self.milvus_client = MilvusHandler()
         self.mysql_client = MySQLHandler()
+<<<<<<< HEAD
+
+=======
+>>>>>>> backend
+        self.encoder_client = VectorHandler()
         self.docs_client = FileHandler()
         self.RAG = RAGHandler()
 
 
 LOADER = UtilsLoader()
 
+logging.debug("====================")
+logging.debug("| loading finished |")
+logging.debug("====================")
 
 @app.get("/", status_code=200)
 async def test():
@@ -63,6 +73,11 @@ async def test():
 async def login():
     return HTTPException(status_code=200, detail="login")
 
+@app.get("/uuid/")
+async def get_uuid() -> str:
+    uuid_ = str(uuid.uuid4())
+    print(uuid_)
+    return uuid_
 
 @app.post("/upload/", status_code=200)
 async def file_upload(docs_file: UploadFile, tags: list[str] = Form(), collection: str = "default"):
@@ -102,7 +117,7 @@ async def file_upload(docs_file: UploadFile, tags: list[str] = Form(), collectio
     for sentence in splitted_content:
         vector = LOADER.encoder_client.encoder(sentence)
         insert_info = LOADER.milvus_client.insert_sentence(
-            pdf_filename=filename,
+            docs_filename=filename,
             vector=vector,
             content=sentence,
             file_uuid=file_uuid,
@@ -124,7 +139,7 @@ async def file_upload(docs_file: UploadFile, tags: list[str] = Form(), collectio
 
 
 @app.post("/chat/{chat_id}", status_code=200)
-async def questioning(chat_id: str, question: str,  user_id: str, collection: str = "default"):
+async def questioning(question_model:QuestioningModel):
     """Ask the question and return the answer from RAG
 
     Args:
@@ -137,6 +152,10 @@ async def questioning(chat_id: str, question: str,  user_id: str, collection: st
         answer: response of the question
         server_status_code: 200 | 500
     """
+    chat_id = question_model.chat_id
+    question = question_model.question
+    user_id = question_model.user_id
+    collection = question_model.collection
     question_uuid = str(uuid.uuid4())
 
     logging.debug(pformat({
@@ -155,7 +174,6 @@ async def questioning(chat_id: str, question: str,  user_id: str, collection: st
         regulations=regulations["content"], question=question)
 
     # insert into mysql
-    # to be
     LOADER.mysql_client.insert_chatting(
         chat_id=chat_id,
         qa_id=question_uuid,
@@ -167,7 +185,11 @@ async def questioning(chat_id: str, question: str,  user_id: str, collection: st
     )
 
     if answer:
-        return HTTPException(status_code=200, detail="".join(answer))
+        return {
+            "question_uuid": question_uuid,
+            "answer": answer,
+            "file_ids": set(regulations["source"]),
+        }
 
     return HTTPException(status_code=200, detail="Internal server error")
 

@@ -49,7 +49,11 @@ export default function ChatPage() {
       .then((res) => res.json())
       .then((data) => {
         setChatUUID(data)
+<<<<<<< HEAD
     })
+=======
+      })
+>>>>>>> main
   }, [])
 
   return (
