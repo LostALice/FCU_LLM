@@ -49,7 +49,10 @@ class UtilsLoader(object):
     def __init__(self) -> None:
         self.milvus_client = MilvusHandler()
         self.mysql_client = MySQLHandler()
+<<<<<<< HEAD
 
+=======
+>>>>>>> backend
         self.encoder_client = VectorHandler()
         self.docs_client = FileHandler()
         self.RAG = RAGHandler()
@@ -57,6 +60,9 @@ class UtilsLoader(object):
 
 LOADER = UtilsLoader()
 
+logging.debug("====================")
+logging.debug("| loading finished |")
+logging.debug("====================")
 
 @app.get("/", status_code=200)
 async def test():
