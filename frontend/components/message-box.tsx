@@ -1,16 +1,21 @@
-"use client"
-
 import { FC } from "react";
+import { siteConfig } from "@/config/site"
+
 import { Divider } from "@nextui-org/divider";
 import { Tooltip } from "@nextui-org/tooltip";
 import { Button } from "@nextui-org/button";
 import { Link } from "@nextui-org/link";
 
-import { MessageInfo } from "@/types";
+import { IMessageInfo } from "@/types";
 
 
-// export function MessageBox({ questionUUID, question, answer, attachments, time }): FC<MessageInfo> {
-export const MessageBox: FC<MessageInfo> = ({ questionUUID, question, answer, attachments, time }) => {
+export const MessageBox: FC<IMessageInfo> = ({
+	questionUUID,
+	question,
+	answer,
+	files,
+	time
+}) => {
 	return (
 		<Tooltip
 			content={<span>{time}  {questionUUID}</span>}
@@ -26,22 +31,22 @@ export const MessageBox: FC<MessageInfo> = ({ questionUUID, question, answer, at
 					<Divider className="my-2" />
 					<div className="flex justify-between">
 						<div className="flex text-left gap-3">
-							{attachments?.map((attachment) => (
+							{files?.map((file) => (
 								<Tooltip
-									content={<span className="text-left">{attachment}</span>}
+									content={<span className="text-left">{file.file_name}</span>}
 									placement="bottom"
-									key={attachment}
+									key={file.file_uuid}
 								>
 									<Button
 										size="sm"
 										isExternal
-										href={"./docs/" + attachment}
-										key={attachment}
+										href={siteConfig.api_url?.toString() + "/docs/" + file.file_uuid}
+										key={file.file_uuid}
 										as={Link}
 										showAnchorIcon
 										className="text-small w-[7rem] "
 									>
-										<span className="text-left truncate italic">{attachment}</span>
+										<span className="text-left truncate italic">{file.file_name}</span>
 									</Button>
 								</Tooltip>
 							))}

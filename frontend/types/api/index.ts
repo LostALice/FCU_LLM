@@ -1,14 +1,22 @@
 // Code by AkinoAlice@TyrantRey
 
-export interface askQuestionRequestFormat {
-  chatID: string
-  question: string
-  userID: string | "guest"
-  collection: string | "default"
+import { IFiles } from "@/types"
+
+export interface TAskQuestionRequestFormat {
+    chatID: string
+    question: string
+    userID: string | "guest"
+    collection: string | "default"
 }
 
-export interface askQuestionResponseFormat {
-  questionUUID: string
-  answer: string
-  fileIDs: Array<string>
+export interface TAskQuestionResponseFormat {
+    questionUUID: string
+    answer: string
+    files: IFiles[]
+}
+
+export interface IDocsFormat {
+    fileID: string
+    fileName: string
+    lastUpdate: string
 }

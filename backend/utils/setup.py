@@ -104,7 +104,7 @@ class SetupMYSQL(object):
                 `collection` VARCHAR(45) NOT NULL DEFAULT "default",
                 `file_name` VARCHAR(255) NOT NULL,
                 `last_update` TIMESTAMP NOT NULL DEFAULT NOW(),
-                `expired` TINYINT NOT NULL DEFAULT '1',
+                `expired` TINYINT NOT NULL DEFAULT '0',
                 `tags` JSON NOT NULL DEFAULT (JSON_OBJECT()),
                 PRIMARY KEY (`file_id`, `collection`)
             )
@@ -122,7 +122,7 @@ class SetupMYSQL(object):
                 `token_size` INT NOT NULL DEFAULT 0,
                 `sent_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `sent_by` VARCHAR(45) NOT NULL,
-                PRIMARY KEY (`chat_id`)
+                PRIMARY KEY (`chat_id`, `qa_id`)
             );
             """
         )

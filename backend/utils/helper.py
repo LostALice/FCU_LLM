@@ -86,8 +86,8 @@ class MySQLHandler(SetupMYSQL):
 
         success = self.commit()
 
-        if not success:
-            return success
+        # checkpoint
+        assert success
 
         if not file_ids is None:
             for file_id in set(file_ids):
@@ -102,6 +102,57 @@ class MySQLHandler(SetupMYSQL):
 
         return success
 
+    def query_docs_id(self, docs_name: str) -> str:
+        self.cursor.execute("""SELECT file_id
+            FROM FCU_LLM.file
+            WHERE file_name = %s
+            """, (docs_name,)
+        )
+
+        self.sql_query_logger()
+        file_name = self.cursor.fetchone()
+        logging.info(pformat(file_name))
+        return file_name
+
+    def query_docs_name(self, docs_id: str) -> str:
+        self.cursor.execute("""SELECT file_name
+            FROM FCU_LLM.file
+            WHERE file_id = %s
+            """, (docs_id,)
+        )
+
+        self.sql_query_logger()
+        file_name = self.cursor.fetchone()
+        logging.info(pformat(file_name))
+        return file_name
+
+    def select_department_docs_list(self, department_name: str) -> list[dict[str, str, str]]:
+        """get department docs list
+
+        Returns:
+            list[dict[file_id, file_name, last_update]]: list of docs
+        """
+
+        self.cursor.execute(
+            """ SELECT file_id, file_name, last_update
+                FROM FCU_LLM.file
+                WHERE `expired` = 0 AND `tags` -> "$.department" = %s
+            """, (department_name,)
+        )
+
+        self.sql_query_logger()
+        query_result = self.cursor.fetchall()
+        logging.debug(pformat(f"select file list query: {query_result}"))
+
+        return query_result
+
+    def sql_query_logger(self) -> None:
+        """log sql query
+        """
+        logging.debug(pformat(
+            f"committed sql: {str(self.cursor.statement)}"
+        ))
+
     def commit(self, close_connection: bool = False) -> bool:
         """commit a transaction or not then rollback
 
@@ -112,9 +163,7 @@ class MySQLHandler(SetupMYSQL):
             bool: success or failure
         """
         try:
-            logging.debug(pformat(
-                f"committed sql: {str(self.cursor.statement)}"
-            ))
+            self.sql_query_logger()
             self.connection.commit()
             logging.debug(pformat("Mysql committed"))
             return True
@@ -183,7 +232,7 @@ class MilvusHandler(SetupMilvus):
         question_vector: ndarray,
         collection_name: str = "default",
         limit: int = 10
-    ) -> dict[list[str], list[str], list[int]]:
+    ) -> list[dict[str, str, int]]:
         """search for similarity using answer from user and vector database
 
         Args:
@@ -192,18 +241,14 @@ class MilvusHandler(SetupMilvus):
             limit (int, optional): number of rows to return. Defaults to 10.
 
         Returns:
-            regulations[source, content, file_uuid]: list of regulations including source(filename), content(content in file) and file_uuid
+            regulations[dict[source, content, file_uuid]]: list of regulations including source(filename), content(content in file) and file_uuid
         """
 
         docs_results = self.milvus_client.search(collection_name=collection_name, data=[
                                                  question_vector], limit=limit)[0]
         logging.info(f"docs_results: {docs_results}")
 
-        regulations = {
-            "source": [],
-            "content": [],
-            "file_uuid": [],
-        }
+        regulations = []
 
         for _ in docs_results:
             file_ = self.milvus_client.get(
@@ -211,9 +256,11 @@ class MilvusHandler(SetupMilvus):
                 ids=_["id"],
             )[0]
 
-            regulations["source"].append(file_["source"])
-            regulations["content"].append(file_["content"])
-            regulations["file_uuid"].append(file_["file_uuid"])
+            regulations.append({
+                "source": file_["source"],
+                "content": file_["content"],
+                "file_uuid": file_["file_uuid"],
+            })
 
         logging.debug(pformat(regulations))
 
@@ -267,6 +314,17 @@ class VectorHandler(object):
 
 class RAGHandler(object):
     def __init__(self) -> None:
+        # only except .gguf format
+        if not os.getenv("LLM_MODEL").endswith(".gguf"):
+            raise FormatError
+
+        if not os.path.exists(f"""./model/{os.getenv("LLM_MODEL")}"""):
+            from huggingface_hub import hf_hub_download
+            hf_hub_download(
+                repo_id=os.getenv("REPO_ID"),
+                filename=os.getenv("LLM_MODEL"),
+                local_dir="./model"
+            )
 
         self.model = Llama(
             model_path=f"""./model/{os.getenv("LLM_MODEL")}""",
@@ -313,6 +371,7 @@ class RAGHandler(object):
             message,
             stop=["<|eot_id|>", "<|end_of_text|>"],
             max_tokens=max_tokens,
+            temperature=.5
         )["choices"][0]["message"]["content"]
 
         return self.converter.convert(output), token_size

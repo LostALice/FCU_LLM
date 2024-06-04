@@ -1,10 +1,6 @@
 // Code by AkinoAlice@TyrantRey
 
-import {
-    askQuestionRequestFormat,
-    askQuestionResponseFormat,
-} from "@/types/api"
-import { MessageInfo } from "@/types"
+import { TAskQuestionResponseFormat, IDocsFormat } from "@/types/api"
 
 import { siteConfig } from "@/config/site"
 
@@ -13,8 +9,7 @@ export async function askQuestion(
     question: string,
     userID: string,
     collection: string | "default" = "default"
-): Promise<askQuestionResponseFormat> {
-    console.log(chatUUID, question, userID, collection)
+): Promise<TAskQuestionResponseFormat> {
     const resp = await fetch(siteConfig.api_url + "/chat/" + chatUUID, {
         method: "POST",
         headers: {
@@ -31,6 +26,47 @@ export async function askQuestion(
     return {
         questionUUID: data.question_uuid,
         answer: data.answer,
-        fileIDs: data.file_ids,
+        files: data.files,
     }
+}
+
+export async function fetchDocsList(
+    department: string
+): Promise<IDocsFormat[]> {
+    const resp = await fetch(
+        siteConfig.api_url + "/department/" + department + "/",
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        }
+    )
+    const data = await resp.json()
+
+    let docsList = []
+    for (let file of data.docs_list) {
+        const docsInfo: IDocsFormat = {
+            fileID: file.file_id,
+            fileName: file.file_name,
+            lastUpdate: file.last_update.toString().replace("T", " "),
+        }
+        docsList.push(docsInfo)
+    }
+    return docsList
+}
+
+export async function fetchDocs(
+    docsID: string
+): Promise<Blob> {
+    const resp = await fetch(siteConfig.api_url + "/docs/" + docsID + "/", {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/pdf",
+        },
+    })
+    console.log(resp)
+    const data = await resp.blob()
+
+    return data
 }

@@ -10,12 +10,12 @@ import { Spinner } from "@nextui-org/spinner";
 import { Textarea } from "@nextui-org/input";
 import { Button } from "@nextui-org/button";
 
-import { MessageInfo } from "@/types";
 import { askQuestion } from "@/pages/api/api"
+import { IMessageInfo } from "@/types";
 
 export default function ChatPage() {
   const [inputQuestion, setInputQuestion] = useState<string>("")
-  const [chatInfo, setChatInfo] = useState<MessageInfo[]>([])
+  const [chatInfo, setChatInfo] = useState<IMessageInfo[]>([])
   const [isLoading, setLoading] = useState<boolean>(false)
   const [chatUUID, setChatUUID] = useState<string>("")
   const scrollShadow = useRef<HTMLInputElement>(null)
@@ -30,12 +30,12 @@ export default function ChatPage() {
 
     const message = await askQuestion(chatUUID, inputQuestion, "Anonymous", "default")
 
-    const message_info: MessageInfo = {
+    const message_info: IMessageInfo = {
       chatUUID: chatUUID,
       questionUUID: message.questionUUID,
       question: inputQuestion,
       answer: message.answer,
-      attachments: message.fileIDs,
+      files: message.files,
       time: new Date().toDateString(),
     }
 
@@ -49,11 +49,7 @@ export default function ChatPage() {
       .then((res) => res.json())
       .then((data) => {
         setChatUUID(data)
-<<<<<<< HEAD
-    })
-=======
       })
->>>>>>> main
   }, [])
 
   return (
@@ -78,7 +74,7 @@ export default function ChatPage() {
                 questionUUID={item.questionUUID}
                 question={item.question}
                 answer={item.answer}
-                attachments={item.attachments}
+                files={item.files}
                 time={item.time}
               />
             ))}
@@ -95,6 +91,7 @@ export default function ChatPage() {
             value={inputQuestion}
             onValueChange={setInputQuestion}
             disabled={isLoading ? true : false}
+            onKeyDown={(event) => { event.code === "Enter" && !event.shiftKey ? sendMessage() : false }}
           />
           <Button
             radius="none"
