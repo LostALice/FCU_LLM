@@ -19,7 +19,8 @@ services:
       # LLM Setup
       # HF: Llama3-8B-Chinese-Chat-q8-v2.gguf
       # HF: chinese-alpaca-2-7b-gguf-q4_k.gguf
-      - LLM_MODEL=Llama3-8B-Chinese-Chat-q8-v2.gguf
+      - REPO_ID=Llama3-8B-Chinese-Chat-GGUF-4bit
+      - LLM_MODEL=Llama3-8B-Chinese-Chat-q4_0-v2_1.gguf
       - HF_EMBEDDING_MODEL=shibing624/text2vec-base-chinese
     # volumes:
     #   - /path/of/model/:/FCU_LLM/model
