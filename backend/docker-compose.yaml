@@ -1,7 +1,7 @@
 version: "3"
 services:
   backend:
-    image: test:latest
+    image: fcu_llm:latest
     container_name: backend
     environment:
       # Mysql Setup
@@ -19,7 +19,7 @@ services:
       # LLM Setup
       # HF: Llama3-8B-Chinese-Chat-q8-v2.gguf
       # HF: chinese-alpaca-2-7b-gguf-q4_k.gguf
-      - REPO_ID=Llama3-8B-Chinese-Chat-GGUF-4bit
+      - REPO_ID=shenzhi-wang/Llama3-8B-Chinese-Chat-GGUF-4bit
       - LLM_MODEL=Llama3-8B-Chinese-Chat-q4_0-v2_1.gguf
       - HF_EMBEDDING_MODEL=shibing624/text2vec-base-chinese
     # volumes:
@@ -42,7 +42,7 @@ services:
     image: mysql:latest
     container_name: mysql-test
     environment:
-      MYSQL_ROOT_PASSWORD: Zyon-
+      MYSQL_ROOT_PASSWORD: example_password
     restart: unless-stopped
     ports:
      - 3307:3306
